@@ -19,7 +19,7 @@ while private is limited to private users. The default datastore is private.
 ### Reading from the datastore
 
 To get a file from the default datastore, simply call this:
-```scala
+```java 
 // Get version 4 of GreedyParserModel.json in the
 // group org.allenai.parsers.poly-parser
 val path: java.nio.file.Path =
@@ -30,7 +30,7 @@ val path: java.nio.file.Path =
 ```
 
 To get a directory, call this:
-```scala
+```java
 // Get version 1 of the WordNet directory in the
 // group org.allenai.otter
 val path: java.nio.file.Path =
@@ -43,7 +43,7 @@ val path: java.nio.file.Path =
 You can do anything with the resulting path except write to it.
 
 To access a non-default datastore, for example the `private` one, call it like this:
-```scala
+```java
 val path: java.nio.file.Path =
   Datastore("private").directoryPath(
     "org.allenai.otter",
@@ -56,7 +56,7 @@ There is no way to automatically get the latest version from the datastore. This
 ### Publishing to the datastore
 
 There are two main ways to write to the datastore, one for files, and one for directories:
-```scala
+```java
 // publish BigModel.json under the name
 // "GreedyParserModel.json", version 4
 Datastore.publishFile(
