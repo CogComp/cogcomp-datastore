@@ -1,5 +1,8 @@
+import edu.illinois.cs.cogcomp.core.io.IOUtils;
 import io.minio.MinioClient;
 import io.minio.errors.*;
+import io.minio.policy.PolicyType;
+import org.apache.commons.io.FilenameUtils;
 import org.xmlpull.v1.XmlPullParserException;
 import edu.illinois.cs.cogcomp.core.utilities.configuration.ResourceManager;
 
@@ -23,13 +26,12 @@ import java.security.NoSuchAlgorithmException;
  *
  */
 
-// "http://silverbridge.cs.illinois.edu:8081", "1I9SK88HMRAB9UWQ7URC", "IsN/zQ99128acQyZF88ZdtRy+pO1eGEpubd6EhV0"
 public class Datastore {
     private MinioClient minioClient = null;
     private static final String CONFIG_FILE = "datastore-config.properties";
 
     // this is where we keep the files locally
-    private String dataStoreDirectory = System.getProperty("user.home") + File.separator + ".illinois-datastore";
+    private String dataStoreDirectory = System.getProperty("user.home") + File.separator + ".cogcomp-datastore";
 
     public Datastore() throws InvalidPortException, InvalidEndpointException {
         // Create a minioClient with the information read from configuration file
@@ -44,12 +46,15 @@ public class Datastore {
         if(rm.containsKey("ACCESS-KEY") && rm.containsKey("SECRET-KEY")) {
             String accessKey = rm.getString("ACCESS-KEY");
             String secretKey = rm.getString("SECRET-KEY");
-            System.out.println(accessKey);
-            System.out.println(secretKey);
+            System.out.println("Reading config informtion from file . . . \n");
+            System.out.println("\t\tEndpoint: " + endpoint);
+            System.out.println("\t\tAccessKey: " + accessKey);
+            System.out.println("\t\tSecretKey: " + secretKey);
             minioClient = new MinioClient(endpoint, accessKey, secretKey);
         }
         else
             minioClient = new MinioClient(endpoint);
+        IOUtils.mkdir(dataStoreDirectory);
     }
 
     public Datastore(String endpoint) throws InvalidPortException, InvalidEndpointException {
@@ -58,11 +63,13 @@ public class Datastore {
     }
 
     public Datastore(String endpoint, String accessKey, String secretKey) throws InvalidPortException, InvalidEndpointException {
-        System.out.println("endpoint " + endpoint);
-        System.out.println("accessKey " + accessKey);
-        System.out.println("secretKey " + secretKey);
+        System.out.println("Setting the connection details directly with the constructor . . . ");
+        System.out.println("\t\tEndpoint: " + endpoint);
+        System.out.println("\t\tAccessKey: " + accessKey);
+        System.out.println("\t\tSecretKey: " + secretKey);
         // Create a minioClient with the Minio Server name, Port, Access key and Secret key.
         minioClient = new MinioClient(endpoint, accessKey, secretKey);
+        IOUtils.mkdir(dataStoreDirectory);
     }
 
 //    public InputStream getFileAsStream(String groupId, String artifactId, Double version) throws IOException, InvalidKeyException, NoSuchAlgorithmException, InsufficientDataException, InvalidArgumentException, InternalException, NoResponseException, InvalidBucketNameException, XmlPullParserException, ErrorResponseException {
@@ -81,35 +88,124 @@ public class Datastore {
 //    }
 
     public File getFile(String groupId, String artifactId, Double version) throws IOException, InvalidKeyException, NoSuchAlgorithmException, InsufficientDataException, InvalidArgumentException, InternalException, NoResponseException, InvalidBucketNameException, XmlPullParserException, ErrorResponseException {
+        String versionedFileName = getNormalizedArtifactId(artifactId, version);
         String fileName = dataStoreDirectory + File.separator +
                 groupId + File.separator + artifactId + Double.toString(version);
-        minioClient.getObject(groupId, artifactId + Double.toString(version), fileName);
+        System.out.println("Downloading the file from datastore . . . ");
+        System.out.println("\t\tGroupId: " + groupId);
+        System.out.println("\t\tArtifactId: " + versionedFileName);
+        System.out.println("\t\tOutput file: " + fileName);
+        IOUtils.mkdir(dataStoreDirectory + File.separator + groupId);
+        minioClient.getObject(groupId, versionedFileName, fileName);
         return new File(fileName);
     }
 
+    /**
+     * To publish a file into the datastore, given a groupId, artifactId, and version number. If the file already exist,
+     * with the given details, it will give error.
+     */
     public void publishFile(String groupId, String artifactId, Double version, String fileName) throws IOException, InvalidKeyException, NoSuchAlgorithmException, InsufficientDataException, InvalidArgumentException, InternalException, NoResponseException, InvalidBucketNameException, XmlPullParserException, ErrorResponseException {
-        publishFile(groupId, artifactId, version, fileName, false);
+        publishFile(groupId, artifactId, version, fileName, false, false);
     }
 
-    public void publishFile(String groupId, String artifactId, Double version, String fileName, Boolean override) throws IOException, InvalidKeyException, NoSuchAlgorithmException, InsufficientDataException, InvalidArgumentException, InternalException, NoResponseException, InvalidBucketNameException, XmlPullParserException, ErrorResponseException {// Check if the bucket already exists.
-        boolean isExist = minioClient.bucketExists(groupId);
+    public void publishFile(String groupId, String artifactId, Double version, String fileName, Boolean privateBucket,
+                            Boolean overwrite) throws IOException, InvalidKeyException, NoSuchAlgorithmException,
+            InsufficientDataException, InvalidArgumentException, InternalException, NoResponseException, InvalidBucketNameException, XmlPullParserException, ErrorResponseException {// Check if the bucket already exists.
+        String augmentedGroupId = privateBucket?groupId + "-private": groupId;
+        boolean isExist = minioClient.bucketExists(augmentedGroupId);
         if(isExist) {
             System.out.println("GroupId already exists.");
         } else {
             // Make a new bucket called asiatrip to hold a zip file of photos.
-            minioClient.makeBucket(groupId);
+            minioClient.makeBucket(augmentedGroupId);
+            if(privateBucket) try {
+                minioClient.setBucketPolicy(augmentedGroupId, "uploads", PolicyType.WRITE_ONLY);
+            } catch (InvalidObjectPrefixException e) {
+                e.printStackTrace();
+            }
         }
 
-        String[] tokens = artifactId.split("\\.(?=[^\\.]+$)");
-        String versionedFileName = tokens[0] + "-" + Double.toString(version) + "." + tokens[1];
+        String versionedFileName = getNormalizedArtifactId(artifactId, version);
 
-        if( override && minioClient.listObjects(groupId, versionedFileName).iterator().hasNext()) {
-            System.out.println("File already exists! Cannot replace it, unless you set the override to be true. ");
+        if(minioClient.listObjects(augmentedGroupId, versionedFileName).iterator().hasNext()) {
+            if (!overwrite) {
+                System.out.println("File already exists! Cannot replace it, unless you set the overwrite parameter to be true. ");
+            }
+            else {
+                System.out.println("File already exists! Overwriting the old file. ");
+            }
         }
 
-        System.out.println("groupId = " + groupId);
-        System.out.println("artifactId + Double.toString(version) = " + versionedFileName);
-        System.out.println("fileName = " + fileName);
-        minioClient.putObject(groupId, versionedFileName, fileName);
+
+        System.out.println("Publishing file: ");
+        System.out.println("\t\t GroupId: " + augmentedGroupId);
+        System.out.println("\t\t ArtifactId " + versionedFileName);
+        System.out.println("\t\t FileName: " + fileName);
+        minioClient.putObject(augmentedGroupId, versionedFileName, fileName);
+    }
+
+    private String getNormalizedArtifactId(String artifactId, Double version) {
+        String extension = FilenameUtils.getExtension(artifactId);
+        String fileNameWithoutExtension = artifactId.replace(extension, "");
+        return fileNameWithoutExtension + "-" + Double.toString(version) + (extension.equals("")? "": "." + extension);
+    }
+
+    public static void main(String[] args) {
+        try {
+            Datastore ds = new Datastore();
+
+            try {
+                // publish a public file
+                // ds.publishFile("edu.cogcomp", "pom", 1.0, "pom.xml");
+
+                // publish a private file
+                // ds.publishFile("edu.cogcomp", "pom", 1.0, "pom.xml");
+
+                // publish a file and overwrite the old file
+                // ds.publishFile("edu.cogcomp", "pom", 1.0, "pom.xml", true);
+
+                // publish a file and observe overwrite error
+                // ds.publishFile("edu.cogcomp", "pom", 1.0, "pom.xml");
+
+                // read a public file
+                File f = ds.getFile("edu.cogcomp", "pom", 1.0);
+
+                // read a private file
+
+                // publish a public folder
+
+                // publish a private folder
+
+                // read a public folder
+
+                // read a private folder
+
+            } catch (IOException e) {
+                e.printStackTrace();
+            } catch (InvalidKeyException e) {
+                e.printStackTrace();
+            } catch (NoSuchAlgorithmException e) {
+                e.printStackTrace();
+            } catch (InsufficientDataException e) {
+                e.printStackTrace();
+            } catch (InvalidArgumentException e) {
+                e.printStackTrace();
+            } catch (InternalException e) {
+                e.printStackTrace();
+            } catch (NoResponseException e) {
+                e.printStackTrace();
+            } catch (InvalidBucketNameException e) {
+                e.printStackTrace();
+            } catch (XmlPullParserException e) {
+                e.printStackTrace();
+            } catch (ErrorResponseException e) {
+                e.printStackTrace();
+            }
+
+        } catch (InvalidPortException e) {
+            e.printStackTrace();
+        } catch (InvalidEndpointException e) {
+            e.printStackTrace();
+        }
     }
 }
