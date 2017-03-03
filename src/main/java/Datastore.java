@@ -168,6 +168,10 @@ public class Datastore {
                 // ds.publishFile("edu.cogcomp", "pom", 1.0, "pom.xml");
 
                 // read a public file
+                // File f = ds.getFile("edu.cogcomp", "pom", 1.0);
+
+                // read a public file without credentials
+                Datastore dsNoCredentials = new Datastore("http://smaug.cs.illinois.edu:8080");
                 File f = ds.getFile("edu.cogcomp", "pom", 1.0);
 
                 // read a private file

@@ -24,8 +24,16 @@ Datastore ds = new Datastore();
 ```
 
 This will read the authentication information from `datastore-config.properties`. (see [this sample](src/main/resources/datastore-config-sample.properties) file)
-
 Alternatively you can pass these config details as a constructor parameters. 
+
+The *anonymous connection* is when only the end-point is clear (secret key and access key are unknown).
+With this connection only the public files/folders could be accessed. 
+Just like the previous case, specifying only the end-point point in the constructor would result in anonymous connection.  
+
+```java
+Datastore ds = new Datastore("url:port"); // where 'url' and 'port' are replaced your server's information
+```
+
 
 ### Reading from the datastore
 
@@ -35,7 +43,9 @@ To get a file from the default datastore, simply call this:
 File f = ds.getFile("edu.cogcomp", "GreedyParserModel.json", 4.0);
 ```
 
-There is no way to automatically get the latest version from the datastore. 
+The files in public buckes can be accessed with anonymous connection. 
+
+**Note:** There is no way to automatically get the latest version from the datastore. 
 This is by design. If you depend on the "latest" version of an item, your results are not reproducible, because 
 someone might publish a new version and thus change what your code does.
 
