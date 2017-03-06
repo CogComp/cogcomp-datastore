@@ -1,7 +1,10 @@
+package org.cogcomp;
+
 import edu.illinois.cs.cogcomp.core.io.IOUtils;
 import io.minio.MinioClient;
 import io.minio.errors.*;
 import io.minio.policy.PolicyType;
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
 import org.xmlpull.v1.XmlPullParserException;
 import edu.illinois.cs.cogcomp.core.utilities.configuration.ResourceManager;
@@ -9,6 +12,7 @@ import edu.illinois.cs.cogcomp.core.utilities.configuration.ResourceManager;
 import java.io.*;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
+import java.util.Arrays;
 
 /**
  * A thin wrapper over Minio that stores and retrieves immutable data on our machines and supports versioning.
@@ -23,7 +27,6 @@ import java.security.NoSuchAlgorithmException;
  *              * play.minio.io
  *              * 127.0.0.1
  *              * 192.168.1.60
- *
  */
 
 public class Datastore {
@@ -32,6 +35,7 @@ public class Datastore {
 
     // this is where we keep the files locally
     private String dataStoreDirectory = System.getProperty("user.home") + File.separator + ".cogcomp-datastore";
+
 
     public Datastore() throws InvalidPortException, InvalidEndpointException {
         // Create a minioClient with the information read from configuration file
@@ -59,7 +63,7 @@ public class Datastore {
 
     public Datastore(String endpoint) throws InvalidPortException, InvalidEndpointException {
         // Creates Minio client object with given endpoint using anonymous access.
-        minioClient = new MinioClient(endpoint);
+        this.minioClient = new MinioClient(endpoint);
     }
 
     public Datastore(String endpoint, String accessKey, String secretKey) throws InvalidPortException, InvalidEndpointException {
@@ -88,16 +92,23 @@ public class Datastore {
 //    }
 
     public File getFile(String groupId, String artifactId, Double version) throws IOException, InvalidKeyException, NoSuchAlgorithmException, InsufficientDataException, InvalidArgumentException, InternalException, NoResponseException, InvalidBucketNameException, XmlPullParserException, ErrorResponseException {
+        return getFile(groupId, artifactId, version, false);
+    }
+
+    public File getFile(String groupId, String artifactId, Double version, Boolean isPrivate) throws IOException, InvalidKeyException, NoSuchAlgorithmException, InsufficientDataException, InvalidArgumentException, InternalException, NoResponseException, InvalidBucketNameException, XmlPullParserException, ErrorResponseException {
         String versionedFileName = getNormalizedArtifactId(artifactId, version);
-        String fileName = dataStoreDirectory + File.separator +
-                groupId + File.separator + artifactId + Double.toString(version);
+        String augmentedGroupId = (isPrivate? "private.": "readonly.") + groupId;
         System.out.println("Downloading the file from datastore . . . ");
-        System.out.println("\t\tGroupId: " + groupId);
+        System.out.println("\t\tGroupId: " + augmentedGroupId);
         System.out.println("\t\tArtifactId: " + versionedFileName);
-        System.out.println("\t\tOutput file: " + fileName);
-        IOUtils.mkdir(dataStoreDirectory + File.separator + groupId);
-        minioClient.getObject(groupId, versionedFileName, fileName);
-        return new File(fileName);
+        String fileFolder = dataStoreDirectory + File.separator + augmentedGroupId;
+        IOUtils.mkdir(fileFolder);
+        if(versionedFileName.contains("/")) {
+            int idx = versionedFileName.lastIndexOf("/");
+            FileUtils.forceMkdir(new File(fileFolder + File.separator + versionedFileName.substring(0, idx)));
+        }
+        minioClient.getObject(augmentedGroupId, versionedFileName, fileFolder + File.separator + versionedFileName);
+        return new File(fileFolder + File.separator + versionedFileName);
     }
 
     /**
@@ -111,18 +122,26 @@ public class Datastore {
     public void publishFile(String groupId, String artifactId, Double version, String fileName, Boolean privateBucket,
                             Boolean overwrite) throws IOException, InvalidKeyException, NoSuchAlgorithmException,
             InsufficientDataException, InvalidArgumentException, InternalException, NoResponseException, InvalidBucketNameException, XmlPullParserException, ErrorResponseException {// Check if the bucket already exists.
-        String augmentedGroupId = privateBucket?groupId + "-private": groupId;
+        String augmentedGroupId = (privateBucket? "private.": "readonly.") + groupId;
         boolean isExist = minioClient.bucketExists(augmentedGroupId);
         if(isExist) {
             System.out.println("GroupId already exists.");
         } else {
             // Make a new bucket called asiatrip to hold a zip file of photos.
+            System.out.println("Making new bucket: " + augmentedGroupId);
             minioClient.makeBucket(augmentedGroupId);
-            if(privateBucket) try {
-                minioClient.setBucketPolicy(augmentedGroupId, "uploads", PolicyType.WRITE_ONLY);
-            } catch (InvalidObjectPrefixException e) {
-                e.printStackTrace();
-            }
+                try {
+                    if(privateBucket) {
+                        // do nothing: the default behavior is private
+                        // ref: http://stackoverflow.com/a/42616613/1164246
+                    }
+                    else {
+                        // anonymous users should be able to read the file, if it is not private
+                        minioClient.setBucketPolicy(augmentedGroupId, "", PolicyType.READ_ONLY);
+                    }
+                } catch (InvalidObjectPrefixException e) {
+                    e.printStackTrace();
+                }
         }
 
         String versionedFileName = getNormalizedArtifactId(artifactId, version);

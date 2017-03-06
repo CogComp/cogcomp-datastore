@@ -6,7 +6,7 @@
 
     <groupId>org.cogcomp</groupId>
     <artifactId>cogcomp-datastore</artifactId>
-    <version>1.0</version>
+    <version>1.2</version>
 
     <dependencies>
         <dependency>
