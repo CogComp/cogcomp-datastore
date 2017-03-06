@@ -6,6 +6,7 @@ import io.minio.errors.*;
 import io.minio.policy.PolicyType;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
+import org.apache.log4j.lf5.util.Resource;
 import org.xmlpull.v1.XmlPullParserException;
 import edu.illinois.cs.cogcomp.core.utilities.configuration.ResourceManager;
 
@@ -63,6 +64,11 @@ public class Datastore {
 
     public Datastore(String endpoint) throws InvalidPortException, InvalidEndpointException {
         // Creates Minio client object with given endpoint using anonymous access.
+        this.minioClient = new MinioClient(endpoint);
+    }
+
+    public Datastore(ResourceManager rm) throws InvalidPortException, InvalidEndpointException {
+        String endpoint = rm.getString("datastoreEndpoint");
         this.minioClient = new MinioClient(endpoint);
     }
 
