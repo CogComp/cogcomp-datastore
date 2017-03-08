@@ -14,17 +14,16 @@ import java.security.NoSuchAlgorithmException;
 
 /**
  * A thin wrapper over Minio that stores and retrieves immutable data on our machines and supports versioning.
- * Endpoint is an URL, domain name, IPv4 or IPv6 address.
- *              Valid endpoints:
- * https://s3.amazonaws.com
- * https://s3.amazonaws.com/
- * https://play.minio.io:9000
- * http://play.minio.io:9010/
- * localhost
- * localhost.localdomain
- * play.minio.io
- * 127.0.0.1
- * 192.168.1.60
+ * Endpoint is an URL, domain name, IPv4 or IPv6 address. Here are examples of valid endpoints:
+ *      https://s3.amazonaws.com
+ *      https://s3.amazonaws.com/
+ *      https://play.minio.io:9000
+ *      http://play.minio.io:9010/
+ *      localhost
+ *      localhost.localdomain
+ *      play.minio.io
+ *      127.0.0.1
+ *      192.168.1.60
  */
 
 public class Datastore {
@@ -32,8 +31,10 @@ public class Datastore {
     private static final String CONFIG_FILE = "datastore-config.properties";
 
     // this is where we keep the files locally
-    private String dataStoreDirectory = System.getProperty("user.home") + File.separator + ".cogcomp-datastore";
+    private String DATASTORE_FOLDER = System.getProperty("user.home") + File.separator + ".cogcomp-datastore";
 
+    // this is where we keep the temporary files
+    private final String TMP_FOLDER = System.getProperty("user.home") + File.separator + ".cogcomp-datastore.upload.zip";
 
     public Datastore() throws DatastoreException {
         // Create a minioClient with the information read from configuration file
@@ -75,7 +76,8 @@ public class Datastore {
                 throw new DatastoreException("Invalid end-point port . . .");
             }
         }
-        IOUtils.mkdir(dataStoreDirectory);
+        IOUtils.mkdir(DATASTORE_FOLDER);
+        IOUtils.mkdir(TMP_FOLDER);
     }
 
     public Datastore(String endpoint) throws DatastoreException {
@@ -103,7 +105,7 @@ public class Datastore {
         System.out.println("\t\tSecretKey: " + secretKey);
         // Create a minioClient with the Minio Server name, Port, Access key and Secret key.
         minioClient = new MinioClient(endpoint, accessKey, secretKey);
-        IOUtils.mkdir(dataStoreDirectory);
+        IOUtils.mkdir(DATASTORE_FOLDER);
     }
 
 //    public InputStream getFileAsStream(String groupId, String artifactId, Double version) throws IOException, InvalidKeyException, NoSuchAlgorithmException, InsufficientDataException, InvalidArgumentException, InternalException, NoResponseException, InvalidBucketNameException, XmlPullParserException, ErrorResponseException {
@@ -114,7 +116,7 @@ public class Datastore {
 //        InputStream fileStream = getFileAsStream(groupId, artifactId, version);
 //        byte[] buffer = new byte[fileStream.available()];
 //        fileStream.read(buffer);
-//        File targetFile = new File(dataStoreDirectory + File.separator +
+//        File targetFile = new File(DATASTORE_FOLDER + File.separator +
 //                groupId + File.separator + artifactId + Double.toString(version) );
 //        OutputStream outStream = new FileOutputStream(targetFile);
 //        outStream.write(buffer);
@@ -131,7 +133,7 @@ public class Datastore {
         System.out.println("Downloading the file from datastore . . . ");
         System.out.println("\t\tGroupId: " + augmentedGroupId);
         System.out.println("\t\tArtifactId: " + versionedFileName);
-        String fileFolder = dataStoreDirectory + File.separator + augmentedGroupId;
+        String fileFolder = DATASTORE_FOLDER + File.separator + augmentedGroupId;
         IOUtils.mkdir(fileFolder);
         if(versionedFileName.contains("/")) {
             int idx = versionedFileName.lastIndexOf("/");
@@ -185,24 +187,7 @@ public class Datastore {
                             Boolean overwrite) throws DatastoreException  {
         String augmentedGroupId = (privateBucket? "private.": "readonly.") + groupId;
         try {
-            // Check if the bucket already exists.
-            boolean isExist = minioClient.bucketExists(augmentedGroupId);
-            if(isExist) {
-                System.out.println("GroupId already exists.");
-            } else {
-                // Make a new bucket called asiatrip to hold a zip file of photos.
-                System.out.println("Making new bucket: " + augmentedGroupId);
-                minioClient.makeBucket(augmentedGroupId);
-                if(privateBucket) {
-                    // do nothing: the default behavior is private
-                    // ref: http://stackoverflow.com/a/42616613/1164246
-                }
-                else {
-                    // anonymous users should be able to read the file, if it is not private
-                    minioClient.setBucketPolicy(augmentedGroupId, "", PolicyType.READ_ONLY);
-                }
-            }
-
+            setBucketPolicies(augmentedGroupId, privateBucket);
             String versionedFileName = getNormalizedArtifactId(artifactId, version);
 
             if(minioClient.listObjects(augmentedGroupId, versionedFileName).iterator().hasNext()) {
@@ -245,6 +230,141 @@ public class Datastore {
         } catch (InvalidObjectPrefixException e) {
             e.printStackTrace();
         }
+    }
+
+    private void setBucketPolicies(String augmentedGroupId, boolean privateBucket) throws IOException, InvalidKeyException, NoSuchAlgorithmException, InsufficientDataException, InternalException, NoResponseException, InvalidBucketNameException, XmlPullParserException, ErrorResponseException, InvalidObjectPrefixException {
+        // Check if the bucket already exists.
+        boolean isExist = minioClient.bucketExists(augmentedGroupId);
+        if(isExist) {
+            System.out.println("GroupId already exists.");
+        } else {
+            // Make a new bucket called asiatrip to hold a zip file of photos.
+            System.out.println("Making new bucket: " + augmentedGroupId);
+            minioClient.makeBucket(augmentedGroupId);
+            if(privateBucket) {
+                // do nothing: the default behavior is private
+                // ref: http://stackoverflow.com/a/42616613/1164246
+            }
+            else {
+                // anonymous users should be able to read the file, if it is not private
+                minioClient.setBucketPolicy(augmentedGroupId, "", PolicyType.READ_ONLY);
+            }
+        }
+    }
+
+    public void publishDirectory(String groupId, String artifactId, Double version, String path, Boolean privateBucket,
+                            Boolean overwrite) throws DatastoreException  {
+        String augmentedGroupId = (privateBucket? "private.": "readonly.") + groupId;
+        try {
+            setBucketPolicies(augmentedGroupId, privateBucket);
+            String versionedFileName = getNormalizedArtifactId(artifactId, version) + ".zip";
+
+            // creating a zip file of the folder
+            String zippedFileName = TMP_FOLDER + File.separator + new File(path).getName() + ".zip";
+            ZipHelper.zipDir(path, zippedFileName);
+
+            if(minioClient.listObjects(augmentedGroupId, versionedFileName).iterator().hasNext()) {
+                if (!overwrite) {
+                    System.out.println("Directory already exists! Cannot replace it, unless you set the overwrite parameter to be true. ");
+                }
+                else {
+                    System.out.println("Directory already exists! Overwriting the old file. ");
+                }
+            }
+
+            File fileObj = new File(zippedFileName);
+            String fileSizeReadable = FileUtils.byteCountToDisplaySize(fileObj.length());
+            System.out.println("Size of the zipped file: " + fileSizeReadable);
+            System.out.println("Publishing directory: ");
+            System.out.println("\t\t GroupId: " + augmentedGroupId);
+            System.out.println("\t\t ArtifactId " + versionedFileName);
+            System.out.println("\t\t FolderPath: " + path);
+            System.out.println("\t\t ZippedPath: " + zippedFileName);
+            minioClient.putObject(augmentedGroupId, versionedFileName, zippedFileName);
+            IOUtils.rm(zippedFileName);
+        } catch (InvalidBucketNameException e) {
+            e.printStackTrace();
+            throw new DatastoreException("InvalidBucketName . . . ");
+        } catch (NoSuchAlgorithmException e) {
+            e.printStackTrace();
+        } catch (InsufficientDataException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        } catch (InvalidKeyException e) {
+            e.printStackTrace();
+            throw new DatastoreException("InvalidKeyName . . . ");
+        } catch (NoResponseException e) {
+            e.printStackTrace();
+            throw new DatastoreException("No response from server . . . ");
+        } catch (XmlPullParserException e) {
+            e.printStackTrace();
+        } catch (ErrorResponseException e) {
+            e.printStackTrace();
+        } catch (InternalException e) {
+            e.printStackTrace();
+        } catch (InvalidArgumentException e) {
+            e.printStackTrace();
+        } catch (InvalidObjectPrefixException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public File getDirectory(String groupId, String artifactId, Double version, Boolean isPrivate) throws DatastoreException {
+        String versionedFileName = getNormalizedArtifactId(artifactId, version) + ".zip";
+        String augmentedGroupId = (isPrivate? "private.": "readonly.") + groupId;
+        System.out.println("Downloading the folder from datastore . . . ");
+        System.out.println("\t\tGroupId: " + augmentedGroupId);
+        System.out.println("\t\tArtifactId: " + versionedFileName);
+        String fileFolder = DATASTORE_FOLDER + File.separator + augmentedGroupId;
+        IOUtils.mkdir(fileFolder);
+        if(versionedFileName.contains("/")) {
+            int idx = versionedFileName.lastIndexOf("/");
+            String location = fileFolder + File.separator + versionedFileName.substring(0, idx);
+            try {
+                FileUtils.forceMkdir(new File(location));
+            } catch (IOException e) {
+                e.printStackTrace();
+                throw new DatastoreException("Unable to create folder in your local machine " + location + " . . .");
+            }
+        }
+
+        // creating a zip file of the folder
+        String zippedFileName = TMP_FOLDER + File.separator + artifactId + ".zip";
+        try {
+            minioClient.getObject(augmentedGroupId, versionedFileName, zippedFileName);
+        } catch (InvalidBucketNameException e) {
+            e.printStackTrace();
+            throw new DatastoreException("Invalid bucket name . . . ");
+        } catch (NoSuchAlgorithmException e) {
+            e.printStackTrace();
+        } catch (InsufficientDataException e) {
+            e.printStackTrace();
+            throw new DatastoreException("Insufficient data . . . ");
+        } catch (IOException e) {
+            e.printStackTrace();
+        } catch (InvalidKeyException e) {
+            e.printStackTrace();
+            throw new DatastoreException("Invalid key . . . ");
+        } catch (NoResponseException e) {
+            e.printStackTrace();
+            throw new DatastoreException("No server response . . . ");
+        } catch (XmlPullParserException e) {
+            e.printStackTrace();
+        } catch (ErrorResponseException e) {
+            e.printStackTrace();
+        } catch (InternalException e) {
+            e.printStackTrace();
+        } catch (InvalidArgumentException e) {
+            e.printStackTrace();
+        }
+
+        String path = fileFolder + File.separator + version;
+        IOUtils.mkdir(path);
+
+        // unzip the downloaded zip file
+        ZipHelper.unZipIt(zippedFileName, path);
+        return new File(path);
     }
 
     private String getNormalizedArtifactId(String artifactId, Double version) {

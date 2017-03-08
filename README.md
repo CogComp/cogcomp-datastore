@@ -56,13 +56,8 @@ There are two main ways to write to the datastore, one for files, and one for di
 // publish BigModel.json under the name "GreedyParserModel.json", version 4
 ds.publishFile("edu.cogcomp", "GreedyParserModel.json", 4.0, "BigModel.json");
 ```
-
-## Future plan
- - Publishing and reading folders 
- - File permissions 
  
 ## Suggestions / bugs / comments? 
  
- Use issues or pull requests. 
- 
+Use issues or pull requests. 
  
