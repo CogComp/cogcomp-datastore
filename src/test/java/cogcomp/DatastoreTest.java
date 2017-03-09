@@ -1,6 +1,7 @@
 package cogcomp;
 
 import org.junit.Test;
+import static org.junit.Assert.assertTrue;
 
 import java.io.File;
 
@@ -18,11 +19,11 @@ public class DatastoreTest {
     @Test
     public void test() throws DatastoreException {
         File f = ds.getFile("edu.cogcomp", "pom", 1.0);
-        assert f.exists();
+        assertTrue(f.exists());
 
         // download a folder
         File folder = ds.getDirectory("org.cogcomp.gazetteers", "gazetteers", 1.3, false);
-        assert folder.exists();
-        assert folder.isDirectory();
+        assertTrue(folder.exists());
+        assertTrue(folder.isDirectory());
     }
 }
