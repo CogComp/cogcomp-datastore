@@ -1,4 +1,4 @@
-package java.org.cogcomp;
+package org.cogcomp;
 
 import org.cogcomp.Datastore;
 import org.cogcomp.DatastoreException;
@@ -20,6 +20,7 @@ public class DatastoreTest {
     @Test
     public void test() throws DatastoreException {
         ds.publishFile("edu.cogcomp", "pom", 1.0, "pom.xml");
+
         File f = ds.getFile("edu.cogcomp", "pom", 1.0);
         assert f.exists();
     }
