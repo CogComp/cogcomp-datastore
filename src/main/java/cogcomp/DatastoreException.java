@@ -1,4 +1,4 @@
-package org.cogcomp;
+package cogcomp;
 
 public class DatastoreException extends Exception {
     public DatastoreException() { super(); }

@@ -1,4 +1,4 @@
-package org.cogcomp;
+package cogcomp;
 
 import org.junit.Test;
 
@@ -9,7 +9,7 @@ public class DatastoreTest {
 
     static {
         try {
-            ds = new Datastore();
+            ds = new Datastore("http://smaug.cs.illinois.edu:8080");
         } catch (DatastoreException e) {
             e.printStackTrace();
         }
@@ -17,9 +17,12 @@ public class DatastoreTest {
 
     @Test
     public void test() throws DatastoreException {
-        ds.publishFile("edu.cogcomp", "pom", 1.0, "pom.xml");
-
         File f = ds.getFile("edu.cogcomp", "pom", 1.0);
         assert f.exists();
+
+        // download a folder
+        File folder = ds.getDirectory("org.cogcomp.gazetteers", "gazetteers", 1.3, false);
+        assert folder.exists();
+        assert folder.isDirectory();
     }
 }

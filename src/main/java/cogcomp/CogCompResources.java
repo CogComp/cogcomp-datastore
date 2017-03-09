@@ -1,4 +1,4 @@
-package org.cogcomp;
+package cogcomp;
 
 import java.io.File;
 

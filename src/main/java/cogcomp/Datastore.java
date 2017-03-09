@@ -1,4 +1,4 @@
-package org.cogcomp;
+package cogcomp;
 
 import edu.illinois.cs.cogcomp.core.io.IOUtils;
 import io.minio.MinioClient;
