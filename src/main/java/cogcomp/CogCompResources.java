@@ -7,12 +7,11 @@ public class CogCompResources {
     public static void main(String[] args) {
         try {
             Datastore ds = new Datastore();
-            // brownClusterUpload(ds);
+            brownClusterUpload(ds);
             // levinVerbClass(ds);
             // rogetThesaurus(ds);
             // verbLemDict(ds);
-
-            corlex(ds);
+            // corlex(ds);
             // cbcClusters(ds);
             // gazetteers(ds);
 
@@ -28,23 +27,30 @@ public class CogCompResources {
     }
 
     public static void brownClusterUpload(Datastore ds) throws DatastoreException {
-        ds.publishFile("org.cogcomp.brown-clusters", "brown-rcv1.clean.tokenized-CoNLL03.txt-c100-freq1.txt", 1.3,
-                "brown-clusters-1.3/brown-clusters/brown-rcv1.clean.tokenized-CoNLL03.txt-c100-freq1.txt", false, true);
+//        ds.publishFile("org.cogcomp.brown-clusters", "brown-rcv1.clean.tokenized-CoNLL03.txt-c100-freq1.txt", 1.3,
+//                "brown-clusters-1.3/brown-clusters/brown-rcv1.clean.tokenized-CoNLL03.txt-c100-freq1.txt", false, true);
+//
+//        ds.publishFile("org.cogcomp.brown-clusters", "brown-rcv1.clean.tokenized-CoNLL03.txt-c320-freq1.txt", 1.3,
+//                "brown-clusters-1.3/brown-clusters/brown-rcv1.clean.tokenized-CoNLL03.txt-c320-freq1.txt", false, true);
+//
+//        ds.publishFile("org.cogcomp.brown-clusters", "brown-rcv1.clean.tokenized-CoNLL03.txt-c1000-freq1.txt", 1.3,
+//                "brown-clusters-1.3/brown-clusters/brown-rcv1.clean.tokenized-CoNLL03.txt-c1000-freq1.txt", false, true);
+//
+//        ds.publishFile("org.cogcomp.brown-clusters", "brown-rcv1.clean.tokenized-CoNLL03.txt-c3200-freq1.txt", 1.3,
+//                "brown-clusters-1.3/brown-clusters/brown-rcv1.clean.tokenized-CoNLL03.txt-c3200-freq1.txt", false, true);
+//
+//        ds.publishFile("org.cogcomp.brown-clusters", "brownBllipClusters", 1.3,
+//                "brown-clusters-1.3/brown-clusters/brownBllipClusters", false, true);
 
-        ds.publishFile("org.cogcomp.brown-clusters", "brown-rcv1.clean.tokenized-CoNLL03.txt-c320-freq1.txt", 1.3,
-                "brown-clusters-1.3/brown-clusters/brown-rcv1.clean.tokenized-CoNLL03.txt-c320-freq1.txt", false, true);
-
-        ds.publishFile("org.cogcomp.brown-clusters", "brown-rcv1.clean.tokenized-CoNLL03.txt-c1000-freq1.txt", 1.3,
-                "brown-clusters-1.3/brown-clusters/brown-rcv1.clean.tokenized-CoNLL03.txt-c1000-freq1.txt", false, true);
-
-        ds.publishFile("org.cogcomp.brown-clusters", "brown-rcv1.clean.tokenized-CoNLL03.txt-c3200-freq1.txt", 1.3,
-                "brown-clusters-1.3/brown-clusters/brown-rcv1.clean.tokenized-CoNLL03.txt-c3200-freq1.txt", false, true);
-
-        ds.publishFile("org.cogcomp.brown-clusters", "brownBllipClusters", 1.3,
-                "brown-clusters-1.3/brown-clusters/brownBllipClusters", false, true);
-
-        ds.publishFile("org.cogcomp.brown-clusters", "brown-english-wikitext.case-intact.txt-c1000-freq10-v3", 1.3,
+        ds.publishFile("org.cogcomp.brown-clusters", "brown-english-wikitext.case-intact.txt-c1000-freq10-v3.txt", 1.3,
                 "brown-clusters-1.3/brown-clusters/brown-english-wikitext.case-intact.txt-c1000-freq10-v3.txt", false, true);
+
+
+//        ds.getFile("org.cogcomp.brown-clusters", "brown-rcv1.clean.tokenized-CoNLL03.txt-c100-freq1.txt", 1.3);
+//        ds.getFile("org.cogcomp.brown-clusters", "brown-rcv1.clean.tokenized-CoNLL03.txt-c320-freq1.txt", 1.3);
+//        ds.getFile("org.cogcomp.brown-clusters", "brown-rcv1.clean.tokenized-CoNLL03.txt-c1000-freq1.txt", 1.3);
+//        File f = ds.getFile("org.cogcomp.brown-clusters", "brown-rcv1.clean.tokenized-CoNLL03.txt-c3200-freq1.txt", 1.3);
+//        System.out.println(f);
     }
 
     public static void levinVerbClass(Datastore ds) throws DatastoreException {

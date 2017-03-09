@@ -98,6 +98,8 @@ public class Datastore {
     public Datastore(ResourceManager rm) throws InvalidPortException, InvalidEndpointException {
         String endpoint = rm.getString("datastoreEndpoint");
         this.minioClient = new MinioClient(endpoint);
+        IOUtils.mkdir(DATASTORE_FOLDER);
+        IOUtils.mkdir(TMP_FOLDER);
     }
 
     public Datastore(String endpoint, String accessKey, String secretKey) throws InvalidPortException, InvalidEndpointException {
