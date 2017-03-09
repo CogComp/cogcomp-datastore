@@ -1,7 +1,5 @@
 package org.cogcomp;
 
-import org.cogcomp.Datastore;
-import org.cogcomp.DatastoreException;
 import org.junit.Test;
 
 import java.io.File;
