@@ -34,7 +34,7 @@ public class Datastore {
     private String DATASTORE_FOLDER = System.getProperty("user.home") + File.separator + ".cogcomp-datastore";
 
     // this is where we keep the temporary files
-    private final String TMP_FOLDER = System.getProperty("user.home") + File.separator + ".cogcomp-datastore.upload.zip";
+    private final String TMP_FOLDER = System.getProperty("user.home") + File.separator + ".cogcomp-datastore-tmp";
 
     public Datastore() throws DatastoreException {
         // Create a minioClient with the information read from configuration file
@@ -91,6 +91,8 @@ public class Datastore {
             e.printStackTrace();
             throw new DatastoreException("Invalid end-point port . . .");
         }
+        IOUtils.mkdir(DATASTORE_FOLDER);
+        IOUtils.mkdir(TMP_FOLDER);
     }
 
     public Datastore(ResourceManager rm) throws InvalidPortException, InvalidEndpointException {
@@ -106,6 +108,7 @@ public class Datastore {
         // Create a minioClient with the Minio Server name, Port, Access key and Secret key.
         minioClient = new MinioClient(endpoint, accessKey, secretKey);
         IOUtils.mkdir(DATASTORE_FOLDER);
+        IOUtils.mkdir(TMP_FOLDER);
     }
 
 //    public InputStream getFileAsStream(String groupId, String artifactId, Double version) throws IOException, InvalidKeyException, NoSuchAlgorithmException, InsufficientDataException, InvalidArgumentException, InternalException, NoResponseException, InvalidBucketNameException, XmlPullParserException, ErrorResponseException {

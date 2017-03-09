@@ -17,7 +17,7 @@ public class DatastoreTest {
     }
 
     @Test
-    public void test() throws DatastoreException {
+    public void test() throws Exception {
         File f = ds.getFile("edu.cogcomp", "pom", 1.0);
         assertTrue(f.exists());
 
