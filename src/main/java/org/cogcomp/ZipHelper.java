@@ -73,7 +73,6 @@ class ZipHelper {
             ZipEntry ze = zis.getNextEntry();
 
             while(ze!=null){
-
                 String fileName = ze.getName();
                 File newFile = new File(outputFolder + File.separator + fileName);
 

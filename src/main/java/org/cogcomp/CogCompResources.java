@@ -12,8 +12,9 @@ public class CogCompResources {
             // rogetThesaurus(ds);
             // verbLemDict(ds);
 
-            // corlex(ds);
-            cbcClusters(ds);
+            corlex(ds);
+            // cbcClusters(ds);
+            // gazetteers(ds);
 
             // read a public file without credentials
 //             Datastore dsNoCredentials = new Datastore("http://smaug.cs.illinois.edu:8080");
@@ -66,26 +67,21 @@ public class CogCompResources {
     }
 
     public static void corlex(Datastore ds) throws DatastoreException {
-        ds.publishDirectory("org.cogcomp.corelex", "corelex_nouns", 1.3, "corlex-1.3/CORLEX/", false, true);
+//        ds.publishDirectory("org.cogcomp.corelex", "corelex_nouns", 1.3, "corlex-1.3/CORLEX/", false, true);
         File f = ds.getDirectory("org.cogcomp.corelex", "corelex_nouns", 1.3, false);
         System.out.println("f: " + f);
-    }
-
-    //TODO
-    public static void gazetteers(Datastore ds) throws DatastoreException {
-        ds.publishFile("org.cogcomp.corelex", "corelex_nouns", 1.3, "corlex-1.3/CORLEX/corelex_nouns", false, true);
-        ds.publishFile("org.cogcomp.corelex", "corelex_nouns.basictypes.synset", 1.3, "corlex-1.3/CORLEX/corelex_nouns.basictypes.synset", false, true);
-        ds.publishFile("org.cogcomp.corelex", "corelex_nouns.classes", 1.3, "corlex-1.3/CORLEX/corelex_nouns.classes", false, true);
     }
 
     public static void cbcClusters(Datastore ds) throws DatastoreException {
         ds.publishDirectory("org.cogcomp.cbc.clusters", "cbcData", 1.3, "cbc-clusters-1.3/cbcData", false, true);
         File f = ds.getDirectory("org.cogcomp.cbc.clusters", "cbcData", 1.3, false);
         System.out.println("f: " + f);
+    }
 
-        ds.publishFile("org.cogcomp.cbc-clusters", "brown-rcv1.clean.tokenized-CoNLL03.txt-c100-freq1.txt", 1.3,
-                "brown-clusters-1.3/brown-clusters/brown-rcv1.clean.tokenized-CoNLL03.txt-c100-freq1.txt", false, true);
-
+    public static void gazetteers(Datastore ds) throws DatastoreException {
+        ds.publishDirectory("org.cogcomp.gazetteers", "gazetteers", 1.3, "gazetteers-1.3/gazetteers", false, true);
+        File f = ds.getDirectory("org.cogcomp.gazetteers", "gazetteers", 1.3, false);
+        System.out.println("f: " + f);
     }
 
     //TODO

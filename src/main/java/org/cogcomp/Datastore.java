@@ -359,11 +359,14 @@ public class Datastore {
             e.printStackTrace();
         }
 
-        String path = fileFolder + File.separator + version;
+        String path = fileFolder + File.separator + version + File.separator + artifactId;
         IOUtils.mkdir(path);
 
         // unzip the downloaded zip file
         ZipHelper.unZipIt(zippedFileName, path);
+        System.out.println("zippedFileName: " + zippedFileName);
+        System.out.println("path: " + path);
+        System.out.println("artifactId: " + artifactId);
         return new File(path);
     }
 

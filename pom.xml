@@ -6,7 +6,7 @@
 
     <groupId>org.cogcomp</groupId>
     <artifactId>cogcomp-datastore</artifactId>
-    <version>1.5</version>
+    <version>1.9</version>
 
     <dependencies>
         <dependency>
@@ -17,8 +17,14 @@
         <dependency>
             <groupId>edu.illinois.cs.cogcomp</groupId>
             <artifactId>illinois-core-utilities</artifactId>
-            <version>3.0.100</version>
+            <version>3.0.103</version>
         </dependency>
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>4.12</version>
+        </dependency>
+
     </dependencies>
 
     <repositories>
