@@ -1,4 +1,5 @@
 # CogComp-Datastore
+[![Build Status](https://semaphoreci.com/api/v1/cogcomp/cogcomp-datastore/branches/master/badge.svg)](https://semaphoreci.com/cogcomp/cogcomp-datastore)
 
 A thin wrapper over Minio that stores and retrieves immutable data on our machines and supports versioning.
 
