@@ -322,56 +322,62 @@ public class Datastore {
         System.out.println("\t\tGroupId: " + augmentedGroupId);
         System.out.println("\t\tArtifactId: " + versionedFileName);
         String fileFolder = DATASTORE_FOLDER + File.separator + augmentedGroupId;
-        IOUtils.mkdir(fileFolder);
-        if(versionedFileName.contains("/")) {
-            int idx = versionedFileName.lastIndexOf("/");
-            String location = fileFolder + File.separator + versionedFileName.substring(0, idx);
+        String path = fileFolder + File.separator + version + File.separator + artifactId;
+        if(IOUtils.exists(path)) {
+            System.out.println("The target " + path + " already exists. Skipping download from the datastore . . . ");
+        }
+        else {
+            IOUtils.mkdir(fileFolder);
+            if (versionedFileName.contains("/")) {
+                int idx = versionedFileName.lastIndexOf("/");
+                String location = fileFolder + File.separator + versionedFileName.substring(0, idx);
+                try {
+                    FileUtils.forceMkdir(new File(location));
+                } catch (IOException e) {
+                    e.printStackTrace();
+                    throw new DatastoreException("Unable to create folder in your local machine " + location + " . . .");
+                }
+            }
+
+            // creating a zip file of the folder
+            String zippedFileName = TMP_FOLDER + File.separator + artifactId + ".zip";
             try {
-                FileUtils.forceMkdir(new File(location));
+                minioClient.getObject(augmentedGroupId, versionedFileName, zippedFileName);
+            } catch (InvalidBucketNameException e) {
+                e.printStackTrace();
+                throw new DatastoreException("Invalid bucket name . . . ");
+            } catch (NoSuchAlgorithmException e) {
+                e.printStackTrace();
+            } catch (InsufficientDataException e) {
+                e.printStackTrace();
+                throw new DatastoreException("Insufficient data . . . ");
             } catch (IOException e) {
                 e.printStackTrace();
-                throw new DatastoreException("Unable to create folder in your local machine " + location + " . . .");
+            } catch (InvalidKeyException e) {
+                e.printStackTrace();
+                throw new DatastoreException("Invalid key . . . ");
+            } catch (NoResponseException e) {
+                e.printStackTrace();
+                throw new DatastoreException("No server response . . . ");
+            } catch (XmlPullParserException e) {
+                e.printStackTrace();
+            } catch (ErrorResponseException e) {
+                e.printStackTrace();
+            } catch (InternalException e) {
+                e.printStackTrace();
+            } catch (InvalidArgumentException e) {
+                e.printStackTrace();
             }
+
+
+            IOUtils.mkdir(path);
+
+            // unzip the downloaded zip file
+            ZipHelper.unZipIt(zippedFileName, path);
+            System.out.println("zippedFileName: " + zippedFileName);
+            System.out.println("path: " + path);
+            System.out.println("artifactId: " + artifactId);
         }
-
-        // creating a zip file of the folder
-        String zippedFileName = TMP_FOLDER + File.separator + artifactId + ".zip";
-        try {
-            minioClient.getObject(augmentedGroupId, versionedFileName, zippedFileName);
-        } catch (InvalidBucketNameException e) {
-            e.printStackTrace();
-            throw new DatastoreException("Invalid bucket name . . . ");
-        } catch (NoSuchAlgorithmException e) {
-            e.printStackTrace();
-        } catch (InsufficientDataException e) {
-            e.printStackTrace();
-            throw new DatastoreException("Insufficient data . . . ");
-        } catch (IOException e) {
-            e.printStackTrace();
-        } catch (InvalidKeyException e) {
-            e.printStackTrace();
-            throw new DatastoreException("Invalid key . . . ");
-        } catch (NoResponseException e) {
-            e.printStackTrace();
-            throw new DatastoreException("No server response . . . ");
-        } catch (XmlPullParserException e) {
-            e.printStackTrace();
-        } catch (ErrorResponseException e) {
-            e.printStackTrace();
-        } catch (InternalException e) {
-            e.printStackTrace();
-        } catch (InvalidArgumentException e) {
-            e.printStackTrace();
-        }
-
-        String path = fileFolder + File.separator + version + File.separator + artifactId;
-        IOUtils.mkdir(path);
-
-        // unzip the downloaded zip file
-        ZipHelper.unZipIt(zippedFileName, path);
-        System.out.println("zippedFileName: " + zippedFileName);
-        System.out.println("path: " + path);
-        System.out.println("artifactId: " + artifactId);
         return new File(path);
     }
 
