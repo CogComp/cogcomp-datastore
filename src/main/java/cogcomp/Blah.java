@@ -18,7 +18,7 @@ public class Blah {
 
             String a1 = "readonly.org.cogcomp.comma-srl";
             String a2 = "2.2/comma-srl-data.zip";
-            String a3 = "/Users/daniel/.cogcomp-datastore-tmp/comma-srl-data.zip";
+            String a3 = "comma-srl-data.zip";
 
             // Get object stat information.
             ObjectStat objectStat = minioClient.statObject(a1, a2);
