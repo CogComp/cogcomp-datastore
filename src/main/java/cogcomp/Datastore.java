@@ -27,6 +27,7 @@ import java.security.NoSuchAlgorithmException;
  */
 
 public class Datastore {
+    private boolean traceOn = false;
     private MinioClient minioClient = null;
     private static final String CONFIG_FILE = "datastore-config.properties";
 
@@ -57,6 +58,7 @@ public class Datastore {
             System.out.println("\t\tSecretKey: " + secretKey);
             try {
                 minioClient = new MinioClient(endpoint, accessKey, secretKey);
+                if(this.traceOn) minioClient.traceOn(System.out);
             } catch (InvalidEndpointException e) {
                 e.printStackTrace();
                 throw new DatastoreException("Invalid end-point url . . .");
@@ -68,6 +70,7 @@ public class Datastore {
         else {
             try {
                 minioClient = new MinioClient(endpoint);
+                if(this.traceOn) minioClient.traceOn(System.out);
             } catch (InvalidEndpointException e) {
                 e.printStackTrace();
                 throw new DatastoreException("Invalid end-point url . . .");
@@ -84,6 +87,7 @@ public class Datastore {
         // Creates Minio client object with given endpoint using anonymous access.
         try {
             this.minioClient = new MinioClient(endpoint);
+            if(this.traceOn) minioClient.traceOn(System.out);
         } catch (InvalidEndpointException e) {
             e.printStackTrace();
             throw new DatastoreException("Invalid end-point url . . .");
@@ -98,6 +102,7 @@ public class Datastore {
     public Datastore(ResourceManager rm) throws InvalidPortException, InvalidEndpointException {
         String endpoint = rm.getString("datastoreEndpoint");
         this.minioClient = new MinioClient(endpoint);
+        if(this.traceOn) minioClient.traceOn(System.out);
         IOUtils.mkdir(DATASTORE_FOLDER);
         IOUtils.mkdir(TMP_FOLDER);
     }
@@ -109,6 +114,7 @@ public class Datastore {
         System.out.println("\t\tSecretKey: " + secretKey);
         // Create a minioClient with the Minio Server name, Port, Access key and Secret key.
         minioClient = new MinioClient(endpoint, accessKey, secretKey);
+        if(this.traceOn) minioClient.traceOn(System.out);
         IOUtils.mkdir(DATASTORE_FOLDER);
         IOUtils.mkdir(TMP_FOLDER);
     }
@@ -127,6 +133,10 @@ public class Datastore {
 //        outStream.write(buffer);
 //        return targetFile;
 //    }
+
+    public void setTrace(boolean traceOn) {
+        this.traceOn = traceOn;
+    }
 
     public File getFile(String groupId, String artifactId, Double version) throws DatastoreException {
         return getFile(groupId, artifactId, version, false);
@@ -151,6 +161,9 @@ public class Datastore {
             }
         }
         try {
+            // if the file already exists, drop it:
+            IOUtils.rm(fileFolder + File.separator + versionedFileName);
+            // download from minio
             minioClient.getObject(augmentedGroupId, versionedFileName, fileFolder + File.separator + versionedFileName);
         } catch (InvalidBucketNameException e) {
             e.printStackTrace();
@@ -234,10 +247,12 @@ public class Datastore {
             e.printStackTrace();
         } catch (InvalidObjectPrefixException e) {
             e.printStackTrace();
+        } catch (RegionConflictException e) {
+            e.printStackTrace();
         }
     }
 
-    private void setBucketPolicies(String augmentedGroupId, boolean privateBucket) throws IOException, InvalidKeyException, NoSuchAlgorithmException, InsufficientDataException, InternalException, NoResponseException, InvalidBucketNameException, XmlPullParserException, ErrorResponseException, InvalidObjectPrefixException {
+    private void setBucketPolicies(String augmentedGroupId, boolean privateBucket) throws IOException, InvalidKeyException, NoSuchAlgorithmException, InsufficientDataException, InternalException, NoResponseException, InvalidBucketNameException, XmlPullParserException, ErrorResponseException, InvalidObjectPrefixException, RegionConflictException {
         // Check if the bucket already exists.
         boolean isExist = minioClient.bucketExists(augmentedGroupId);
         if(isExist) {
@@ -312,6 +327,8 @@ public class Datastore {
             e.printStackTrace();
         } catch (InvalidObjectPrefixException e) {
             e.printStackTrace();
+        } catch (RegionConflictException e) {
+            e.printStackTrace();
         }
     }
 
@@ -342,6 +359,9 @@ public class Datastore {
             // creating a zip file of the folder
             String zippedFileName = TMP_FOLDER + File.separator + artifactId + ".zip";
             try {
+                System.out.println("augmentedGroupId: " + augmentedGroupId);
+                System.out.println("versionedFileName: " + versionedFileName);
+                System.out.println("zippedFileName: " + zippedFileName);
                 minioClient.getObject(augmentedGroupId, versionedFileName, zippedFileName);
             } catch (InvalidBucketNameException e) {
                 e.printStackTrace();
