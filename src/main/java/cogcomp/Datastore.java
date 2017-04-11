@@ -4,6 +4,7 @@ import edu.illinois.cs.cogcomp.core.io.IOUtils;
 import io.minio.MinioClient;
 import io.minio.errors.*;
 import io.minio.policy.PolicyType;
+import me.tongfei.progressbar.ProgressBarStyle;
 import org.apache.commons.io.FileUtils;
 import org.xmlpull.v1.XmlPullParserException;
 import edu.illinois.cs.cogcomp.core.utilities.configuration.ResourceManager;
@@ -221,7 +222,13 @@ public class Datastore {
             System.out.println("\t\t GroupId: " + augmentedGroupId);
             System.out.println("\t\t ArtifactId " + versionedFileName);
             System.out.println("\t\t FileName: " + fileName);
-            minioClient.putObject(augmentedGroupId, versionedFileName, fileName);
+
+            File file = new File(fileName);
+            InputStream pis = new BufferedInputStream(new ProgressStream("Uploading... ",
+                    ProgressBarStyle.ASCII, new FileInputStream(file)));
+            //minioClient.putObject(augmentedGroupId, versionedFileName, fileName);
+            minioClient.putObject(augmentedGroupId, versionedFileName, pis, pis.available(), "application/octet-stream");
+            pis.close();
         } catch (InvalidBucketNameException e) {
             e.printStackTrace();
             throw new DatastoreException("InvalidBucketName . . . ");
@@ -300,7 +307,13 @@ public class Datastore {
             System.out.println("\t\t ArtifactId " + versionedFileName);
             System.out.println("\t\t FolderPath: " + path);
             System.out.println("\t\t ZippedPath: " + zippedFileName);
-            minioClient.putObject(augmentedGroupId, versionedFileName, zippedFileName);
+            File file = new File(zippedFileName);
+            InputStream pis = new BufferedInputStream(new ProgressStream("Uploading... ",
+                    ProgressBarStyle.ASCII, new FileInputStream(file)));
+            //minioClient.putObject(augmentedGroupId, versionedFileName, fileName);
+            minioClient.putObject(augmentedGroupId, versionedFileName, pis, pis.available(), "application/octet-stream");
+            //minioClient.putObject(augmentedGroupId, versionedFileName, zippedFileName);
+            pis.close();
             IOUtils.rm(zippedFileName);
         } catch (InvalidBucketNameException e) {
             e.printStackTrace();
