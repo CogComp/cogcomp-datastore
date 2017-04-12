@@ -254,12 +254,10 @@ public class Datastore {
             e.printStackTrace();
         } catch (InvalidObjectPrefixException e) {
             e.printStackTrace();
-        } catch (RegionConflictException e) {
-            e.printStackTrace();
         }
     }
 
-    private void setBucketPolicies(String augmentedGroupId, boolean privateBucket) throws IOException, InvalidKeyException, NoSuchAlgorithmException, InsufficientDataException, InternalException, NoResponseException, InvalidBucketNameException, XmlPullParserException, ErrorResponseException, InvalidObjectPrefixException, RegionConflictException {
+    private void setBucketPolicies(String augmentedGroupId, boolean privateBucket) throws IOException, InvalidKeyException, NoSuchAlgorithmException, InsufficientDataException, InternalException, NoResponseException, InvalidBucketNameException, XmlPullParserException, ErrorResponseException, InvalidObjectPrefixException {
         // Check if the bucket already exists.
         boolean isExist = minioClient.bucketExists(augmentedGroupId);
         if(isExist) {
@@ -339,8 +337,6 @@ public class Datastore {
         } catch (InvalidArgumentException e) {
             e.printStackTrace();
         } catch (InvalidObjectPrefixException e) {
-            e.printStackTrace();
-        } catch (RegionConflictException e) {
             e.printStackTrace();
         }
     }
