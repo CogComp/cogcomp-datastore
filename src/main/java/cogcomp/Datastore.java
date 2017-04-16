@@ -1,7 +1,9 @@
 package cogcomp;
 
+import com.google.common.io.ByteStreams;
 import edu.illinois.cs.cogcomp.core.io.IOUtils;
 import io.minio.MinioClient;
+import io.minio.ObjectStat;
 import io.minio.errors.*;
 import io.minio.policy.PolicyType;
 import me.tongfei.progressbar.ProgressBarStyle;
@@ -10,6 +12,10 @@ import org.xmlpull.v1.XmlPullParserException;
 import edu.illinois.cs.cogcomp.core.utilities.configuration.ResourceManager;
 
 import java.io.*;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 
@@ -170,9 +176,22 @@ public class Datastore {
             try {
                 // if the file already exists, drop it:
                 // IOUtils.rm(fileFolder + File.separator + versionedFileName);
-                // download from minio
-                minioClient.setTimeout(1000, 1000, 1000);
-                minioClient.getObject(augmentedGroupId, versionedFileName, downloadedFileName);
+
+                ObjectStat objectStat = minioClient.statObject(augmentedGroupId, versionedFileName);
+
+                InputStream is = new ProgressStream("Downloading .. ", ProgressBarStyle.ASCII,
+                        objectStat.length(), minioClient.getObject(augmentedGroupId, versionedFileName));
+
+                Path path = Paths.get(downloadedFileName);
+                OutputStream os = Files.newOutputStream(path, StandardOpenOption.CREATE);
+
+                long bytesWritten = ByteStreams.copy(is, os);
+                is.close();
+                os.close();
+
+                if (bytesWritten != objectStat.length()) {
+                    throw new IOException(path + ": unexpected data written.  expected = " + objectStat.length() + ", written = " + bytesWritten);
+                }
             } catch (InvalidBucketNameException e) {
                 e.printStackTrace();
                 throw new DatastoreException("Invalid bucket name . . . ");
