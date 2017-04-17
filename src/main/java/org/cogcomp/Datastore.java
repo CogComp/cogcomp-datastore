@@ -1,4 +1,4 @@
-package cogcomp;
+package org.cogcomp;
 
 import com.google.common.io.ByteStreams;
 import edu.illinois.cs.cogcomp.core.io.IOUtils;

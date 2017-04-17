@@ -1,4 +1,4 @@
-package cogcomp;
+package org.cogcomp;
 
 import org.junit.Test;
 import static org.junit.Assert.assertTrue;

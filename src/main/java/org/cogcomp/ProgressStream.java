@@ -1,4 +1,4 @@
-package cogcomp;
+package org.cogcomp;
 
 /*
  * Minio Java SDK for Amazon S3 Compatible Cloud Storage, (C) 2017 Minio, Inc.

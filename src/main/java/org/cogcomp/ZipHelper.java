@@ -1,4 +1,4 @@
-package cogcomp;
+package org.cogcomp;
 
 import java.io.File;
 import java.io.FileInputStream;
