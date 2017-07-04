@@ -39,10 +39,13 @@ public class Datastore {
     private static final String CONFIG_FILE = "datastore-config.properties";
 
     // this is where we keep the files locally
-    private String DATASTORE_FOLDER = System.getProperty("user.home") + File.separator + ".cogcomp-datastore";
+    private String DATASTORE_FOLDER = null;
 
     // this is where we keep the temporary files
-    private final String TMP_FOLDER = System.getProperty("user.home") + File.separator + ".cogcomp-datastore-tmp";
+    private String TMP_FOLDER = null;
+
+    // if this is not null, we will put files in this location
+    private String cacheFolder = null;
 
     public Datastore() throws DatastoreException {
         // Create a minioClient with the information read from configuration file
@@ -59,6 +62,7 @@ public class Datastore {
         if(rm.containsKey("ACCESS-KEY") && rm.containsKey("SECRET-KEY")) {
             String accessKey = rm.getString("ACCESS-KEY");
             String secretKey = rm.getString("SECRET-KEY");
+            this.cacheFolder = rm.containsKey("CACHE-ROOT-FOLDER")?rm.getString("CACHE-ROOT-FOLDER"):null;
             System.out.println("Reading config informtion from file . . . \n");
             System.out.println("\t\tEndpoint: " + endpoint);
             System.out.println("\t\tAccessKey: " + accessKey);
@@ -86,11 +90,16 @@ public class Datastore {
                 throw new DatastoreException("Invalid end-point port . . .");
             }
         }
+        setCacheFolders();
         IOUtils.mkdir(DATASTORE_FOLDER);
         IOUtils.mkdir(TMP_FOLDER);
     }
 
     public Datastore(String endpoint) throws DatastoreException {
+        new Datastore(endpoint, System.getProperty("user.home"));
+    }
+
+    public Datastore(String endpoint, String cacheFolder) throws DatastoreException {
         // Creates Minio client object with given endpoint using anonymous access.
         try {
             this.minioClient = new MinioClient(endpoint);
@@ -102,6 +111,8 @@ public class Datastore {
             e.printStackTrace();
             throw new DatastoreException("Invalid end-point port . . .");
         }
+        this.cacheFolder = cacheFolder;
+        setCacheFolders();
         IOUtils.mkdir(DATASTORE_FOLDER);
         IOUtils.mkdir(TMP_FOLDER);
     }
@@ -110,20 +121,36 @@ public class Datastore {
         String endpoint = rm.getString("datastoreEndpoint");
         this.minioClient = new MinioClient(endpoint);
         if(this.traceOn) minioClient.traceOn(System.out);
+        this.cacheFolder = (rm.containsKey("CACHE-ROOT-FOLDER"))?rm.getString("CACHE-ROOT-FOLDER"):null;
+        this.setCacheFolders();
         IOUtils.mkdir(DATASTORE_FOLDER);
         IOUtils.mkdir(TMP_FOLDER);
     }
 
     public Datastore(String endpoint, String accessKey, String secretKey) throws InvalidPortException, InvalidEndpointException {
+        new Datastore(endpoint, accessKey, secretKey, System.getProperty("user.home"));
+    }
+
+    public Datastore(String endpoint, String accessKey, String secretKey, String cacheFolder) throws InvalidPortException, InvalidEndpointException {
         System.out.println("Setting the connection details directly with the constructor . . . ");
         System.out.println("\t\tEndpoint: " + endpoint);
         System.out.println("\t\tAccessKey: " + accessKey);
         System.out.println("\t\tSecretKey: " + secretKey);
         // Create a minioClient with the Minio Server name, Port, Access key and Secret key.
         minioClient = new MinioClient(endpoint, accessKey, secretKey);
+        this.cacheFolder = cacheFolder;
         if(this.traceOn) minioClient.traceOn(System.out);
+        this.setCacheFolders();
         IOUtils.mkdir(DATASTORE_FOLDER);
         IOUtils.mkdir(TMP_FOLDER);
+    }
+
+    // upon running this file, we'd set the folders for caching.
+    // ideally this should be run only once and at the initialization time
+    private void setCacheFolders() {
+        String f = (this.cacheFolder == null)? System.getProperty("user.home"):this.cacheFolder;
+        this.DATASTORE_FOLDER = f + File.separator + ".cogcomp-datastore";
+        this.TMP_FOLDER = this.DATASTORE_FOLDER + File.separator + "tmp";
     }
 
 //    public InputStream getFileAsStream(String groupId, String artifactId, Double version) throws IOException, InvalidKeyException, NoSuchAlgorithmException, InsufficientDataException, InvalidArgumentException, InternalException, NoResponseException, InvalidBucketNameException, XmlPullParserException, ErrorResponseException {
@@ -239,6 +266,7 @@ public class Datastore {
             if(minioClient.listObjects(augmentedGroupId, versionedFileName).iterator().hasNext()) {
                 if (!overwrite) {
                     System.out.println("File already exists! Cannot replace it, unless you set the overwrite parameter to be true. ");
+                    return;
                 }
                 else {
                     System.out.println("File already exists! Overwriting the old file. ");

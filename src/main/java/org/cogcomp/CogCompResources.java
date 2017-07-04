@@ -18,6 +18,10 @@ public class CogCompResources {
             commaSRL(ds);
             mateTools(ds);
             pathLSTM(ds);
+            word2vec(ds);
+            verbSenseModels(ds);
+            senseList(ds);
+            wordEmbeddingFile(ds);
         } catch (DatastoreException e) {
             e.printStackTrace();
         }
@@ -94,6 +98,25 @@ public class CogCompResources {
         System.out.println("f: " + f);
     }
 
+    public static void word2vec(Datastore ds) throws DatastoreException {
+        ds.publishFile("org.cogcomp.embeddings",
+                "GoogleNews-vectors-negative300-length=200000.bin", 1.0,
+                "/Users/daniel/ideaProjects/convertvec/GoogleNews-vectors-negative300-length=200000.bin",
+                false, false);
+
+        File f = ds.getFile("org.cogcomp.embeddings", "GoogleNews-vectors-negative300-length=200000.bin", 1.0, false);
+        System.out.println("f: " + f);
+
+
+        ds.publishFile("org.cogcomp.embeddings",
+                "GoogleNews-vectors-negative300.bin", 1.0,
+                "/Users/daniel/ideaProjects/convertvec/GoogleNews-vectors-negative300.bin",
+                false, false);
+
+        File f2 = ds.getFile("org.cogcomp.embeddings", "GoogleNews-vectors-negative300.bin", 1.0, false);
+        System.out.println("f: " + f2);
+    }
+
     public static void corlex(Datastore ds) throws DatastoreException {
         ds.publishDirectory("org.cogcomp.corelex", "corelex_nouns", 1.3, "corlex-1.3/CORLEX/", false, true);
         File f = ds.getDirectory("org.cogcomp.corelex", "corelex_nouns", 1.3, false);
@@ -149,5 +172,24 @@ public class CogCompResources {
                 "/Users/daniel/ideaProjects/illinois-cogcomp-nlp/models/srl-ACL2016-eng.model",
                 false, true);
         File f = ds.getFile("uk.ac.ed.inf", "pathLSTM.model", 1.0, false);
+    }
+
+    public static void verbSenseModels(Datastore ds) throws DatastoreException {
+        ds.publishDirectory("edu.illinois.cs.cogcomp.verbsense", "verbsense-models", 1.0, "/Users/daniel/ideaProjects/illinois-verbsense/models", false, true);
+        File f = ds.getDirectory("edu.illinois.cs.cogcomp.verbsense", "verbsense-models", 1.0, false);
+        System.out.println("f: " + f);
+    }
+
+    public static void senseList(Datastore ds) throws DatastoreException {
+        ds.publishFile("edu.illinois.cs.cogcomp.verbsense", "sense-list.txt", 1.0,
+                "/Users/daniel/ideaProjects/illinois-verbsense/data2/sense-list.txt",
+                false, true);
+        File f = ds.getFile("edu.illinois.cs.cogcomp.verbsense", "sense-list.txt", 1.0, false);
+    }
+
+    public static void wordEmbeddingFile(Datastore ds) throws DatastoreException {
+        ds.publishFile("org.cogcomp.wordembedding", "phrase2vec.txt", 1.5,
+                "/Users/daniel/Desktop/phrase2vec.txt", false, true);
+        File f = ds.getFile("org.cogcomp.wordembedding", "phrase2vec.txt", 1.5);
     }
 }
