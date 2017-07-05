@@ -1,19 +1,17 @@
 package org.cogcomp;
 
+import org.junit.Before;
 import org.junit.Test;
 import static org.junit.Assert.assertTrue;
 
 import java.io.File;
 
 public class DatastoreTest {
-    static Datastore ds = null;
+    Datastore ds = null;
 
-    static {
-        try {
-            ds = new Datastore("http://smaug.cs.illinois.edu:8080");
-        } catch (DatastoreException e) {
-            e.printStackTrace();
-        }
+    @Before
+    public void setup() throws Exception {
+        ds = new Datastore("http://smaug.cs.illinois.edu:8080");
     }
 
     @Test

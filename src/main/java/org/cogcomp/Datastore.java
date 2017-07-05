@@ -96,7 +96,7 @@ public class Datastore {
     }
 
     public Datastore(String endpoint) throws DatastoreException {
-        new Datastore(endpoint, System.getProperty("user.home"));
+        this(endpoint, System.getProperty("user.home"));
     }
 
     public Datastore(String endpoint, String cacheFolder) throws DatastoreException {
@@ -128,7 +128,7 @@ public class Datastore {
     }
 
     public Datastore(String endpoint, String accessKey, String secretKey) throws InvalidPortException, InvalidEndpointException {
-        new Datastore(endpoint, accessKey, secretKey, System.getProperty("user.home"));
+        this(endpoint, accessKey, secretKey, System.getProperty("user.home"));
     }
 
     public Datastore(String endpoint, String accessKey, String secretKey, String cacheFolder) throws InvalidPortException, InvalidEndpointException {
@@ -204,7 +204,7 @@ public class Datastore {
                 // if the file already exists, drop it:
                 // IOUtils.rm(fileFolder + File.separator + versionedFileName);
 
-                ObjectStat objectStat = minioClient.statObject(augmentedGroupId, versionedFileName);
+                ObjectStat objectStat = this.minioClient.statObject(augmentedGroupId, versionedFileName);
 
                 InputStream is = new ProgressStream("Downloading .. ", ProgressBarStyle.ASCII,
                         objectStat.length(), minioClient.getObject(augmentedGroupId, versionedFileName));
@@ -215,7 +215,6 @@ public class Datastore {
                 long bytesWritten = ByteStreams.copy(is, os);
                 is.close();
                 os.close();
-
                 if (bytesWritten != objectStat.length()) {
                     throw new IOException(path + ": unexpected data written.  expected = " + objectStat.length() + ", written = " + bytesWritten);
                 }
@@ -272,7 +271,6 @@ public class Datastore {
                     System.out.println("File already exists! Overwriting the old file. ");
                 }
             }
-
             System.out.println("Publishing file: ");
             System.out.println("\t\t GroupId: " + augmentedGroupId);
             System.out.println("\t\t ArtifactId " + versionedFileName);
