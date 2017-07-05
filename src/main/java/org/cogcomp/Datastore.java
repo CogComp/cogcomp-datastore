@@ -472,7 +472,7 @@ public class Datastore {
         String fileNameWithoutExtension = artifactId.replace(extension, "");
         fileNameWithoutExtension + "-" + Double.toString(version) + (extension.equals("")? "": "." + extension);
         */
-        return version + File.separator + artifactId;
+        return version + "/" + artifactId;
     }
 
     public static void main(String[] args) {
