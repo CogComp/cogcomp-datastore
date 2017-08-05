@@ -7,21 +7,22 @@ public class CogCompResources {
     public static void main(String[] args) {
         try {
             Datastore ds = new Datastore();
-            brownClusterUpload(ds);
-            levinVerbClass(ds);
-            rogetThesaurus(ds);
-            verbLemDict(ds);
-            corlex(ds);
-            cbcClusters(ds);
-            gazetteers(ds);
-            wordEmbedding(ds);
-            commaSRL(ds);
-            mateTools(ds);
-            pathLSTM(ds);
-            word2vec(ds);
-            verbSenseModels(ds);
-            senseList(ds);
-            wordEmbeddingFile(ds);
+//            brownClusterUpload(ds);
+//            levinVerbClass(ds);
+//            rogetThesaurus(ds);
+//            verbLemDict(ds);
+//            corlex(ds);
+//            cbcClusters(ds);
+//            gazetteers(ds);
+//            wordEmbedding(ds);
+//            commaSRL(ds);
+//            mateTools(ds);
+//            pathLSTM(ds);
+//            word2vec(ds);
+//            verbSenseModels(ds);
+//            senseList(ds);
+//            wordEmbeddingFile(ds);
+            publishMentionModels(ds);
         } catch (DatastoreException e) {
             e.printStackTrace();
         }
@@ -192,4 +193,31 @@ public class CogCompResources {
                 "/Users/daniel/Desktop/phrase2vec.txt", false, true);
         File f = ds.getFile("org.cogcomp.wordembedding", "phrase2vec.txt", 1.5);
     }
+
+    public static void publishMentionModels(Datastore ds) throws DatastoreException {
+        ds.publishDirectory("org.cogcomp.mention", "ACE_EXTENT", 1.0, "/Users/daniel/ideaProjects/cogcomp-datastore/models/ACE_EXTENT", false, true);
+        File f = ds.getDirectory("org.cogcomp.mention", "ACE_EXTENT", 1.0, false);
+        System.out.println("f: " + f);
+
+        ds.publishDirectory("org.cogcomp.mention", "ACE_HEAD_NONTYPE", 1.0, "/Users/daniel/ideaProjects/cogcomp-datastore/models/ACE_HEAD_NONTYPE", false, true);
+        File f2 = ds.getDirectory("org.cogcomp.mention", "ACE_HEAD_NONTYPE", 1.0, false);
+        System.out.println("f2: " + f2);
+
+        ds.publishDirectory("org.cogcomp.mention", "ACE_HEAD_TYPE", 1.0, "/Users/daniel/ideaProjects/cogcomp-datastore/models/ACE_HEAD_TYPE", false, true);
+        File f3 = ds.getDirectory("org.cogcomp.mention", "ACE_HEAD_TYPE", 1.0, false);
+        System.out.println("f3: " + f3);
+
+        ds.publishDirectory("org.cogcomp.mention", "ERE_EXTENT", 1.0, "/Users/daniel/ideaProjects/cogcomp-datastore/models/ERE_EXTENT", false, true);
+        File f2 = ds.getDirectory("org.cogcomp.mention", "ERE_EXTENT", 1.0, false);
+        System.out.println("f4: " + f4);
+
+        ds.publishDirectory("org.cogcomp.mention", "ERE_HEAD_NONTYPE", 1.0, "/Users/daniel/ideaProjects/cogcomp-datastore/models/ERE_HEAD_NONTYPE", false, true);
+        File f2 = ds.getDirectory("org.cogcomp.mention", "ERE_HEAD_NONTYPE", 1.0, false);
+        System.out.println("f5: " + f5);
+
+        ds.publishDirectory("org.cogcomp.mention", "ERE_HEAD_TYPE", 1.0, "/Users/daniel/ideaProjects/cogcomp-datastore/models/ERE_HEAD_TYPE", false, true);
+        File f2 = ds.getDirectory("org.cogcomp.mention", "ERE_HEAD_TYPE", 1.0, false);
+        System.out.println("f6: " + f6);
+    }
+
 }
