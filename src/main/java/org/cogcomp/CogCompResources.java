@@ -208,15 +208,15 @@ public class CogCompResources {
         System.out.println("f3: " + f3);
 
         ds.publishDirectory("org.cogcomp.mention", "ERE_EXTENT", 1.0, "/Users/daniel/ideaProjects/cogcomp-datastore/models/ERE_EXTENT", false, true);
-        File f2 = ds.getDirectory("org.cogcomp.mention", "ERE_EXTENT", 1.0, false);
+        File f4 = ds.getDirectory("org.cogcomp.mention", "ERE_EXTENT", 1.0, false);
         System.out.println("f4: " + f4);
 
         ds.publishDirectory("org.cogcomp.mention", "ERE_HEAD_NONTYPE", 1.0, "/Users/daniel/ideaProjects/cogcomp-datastore/models/ERE_HEAD_NONTYPE", false, true);
-        File f2 = ds.getDirectory("org.cogcomp.mention", "ERE_HEAD_NONTYPE", 1.0, false);
+        File f5 = ds.getDirectory("org.cogcomp.mention", "ERE_HEAD_NONTYPE", 1.0, false);
         System.out.println("f5: " + f5);
 
         ds.publishDirectory("org.cogcomp.mention", "ERE_HEAD_TYPE", 1.0, "/Users/daniel/ideaProjects/cogcomp-datastore/models/ERE_HEAD_TYPE", false, true);
-        File f2 = ds.getDirectory("org.cogcomp.mention", "ERE_HEAD_TYPE", 1.0, false);
+        File f6 = ds.getDirectory("org.cogcomp.mention", "ERE_HEAD_TYPE", 1.0, false);
         System.out.println("f6: " + f6);
     }
 
