@@ -177,6 +177,11 @@ public class Datastore {
     }
 
     public File getFile(String groupId, String artifactId, Double version, Boolean isPrivate) throws DatastoreException {
+        try {
+            IOUtils.cleanDir(TMP_FOLDER);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
         String versionedFileName = getNormalizedArtifactId(artifactId, version);
         String augmentedGroupId = (isPrivate? "private.": "readonly.") + groupId;
         System.out.println("Downloading the file from datastore . . . ");
@@ -395,6 +400,11 @@ public class Datastore {
     }
 
     public File getDirectory(String groupId, String artifactId, Double version, Boolean isPrivate) throws DatastoreException {
+        try {
+            IOUtils.cleanDir(TMP_FOLDER);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
         String versionedFileName = getNormalizedArtifactId(artifactId, version) + ".zip";
         String augmentedGroupId = (isPrivate? "private.": "readonly.") + groupId;
         System.out.println("Downloading the folder from datastore . . . ");
