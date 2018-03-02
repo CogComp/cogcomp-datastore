@@ -337,8 +337,9 @@ public class Datastore {
             setBucketPolicies(augmentedGroupId, privateBucket);
             String versionedFileName = getNormalizedArtifactId(artifactId, version) + ".zip";
 
-            // creating a zip file of the folder
-            String zippedFileName = TMP_FOLDER + File.separator + new File(path).getName() + ".zip";
+            // creating a zip file of the folder. Ensure the path to the temp zip file actually exists.
+            String zippedFileName = TMP_FOLDER + File.separator + version + File.separator + new File(path).getName() + ".zip";
+            IOUtils.mkdir(TMP_FOLDER + File.separator + version + File.separator);
             ZipHelper.zipDir(path, zippedFileName);
 
             if(minioClient.listObjects(augmentedGroupId, versionedFileName).iterator().hasNext()) {
@@ -419,7 +420,8 @@ public class Datastore {
             }
 
             // creating a zip file of the folder
-            String zippedFileName = TMP_FOLDER + File.separator + artifactId + ".zip";
+            String zippedFileName = TMP_FOLDER + File.separator + version + File.separator + artifactId + ".zip";
+            IOUtils.mkdir(TMP_FOLDER + File.separator + version + File.separator);
             try {
                 System.out.println("augmentedGroupId: " + augmentedGroupId);
                 System.out.println("versionedFileName: " + versionedFileName);
@@ -450,8 +452,6 @@ public class Datastore {
             } catch (InvalidArgumentException e) {
                 e.printStackTrace();
             }
-
-
             IOUtils.mkdir(path);
 
             // unzip the downloaded zip file
@@ -459,6 +459,11 @@ public class Datastore {
             System.out.println("zippedFileName: " + zippedFileName);
             System.out.println("path: " + path);
             System.out.println("artifactId: " + artifactId);
+            try {
+                IOUtils.rm(zippedFileName);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
         return new File(path);
     }
