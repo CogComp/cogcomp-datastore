@@ -12,12 +12,18 @@ import org.xmlpull.v1.XmlPullParserException;
 import edu.illinois.cs.cogcomp.core.utilities.configuration.ResourceManager;
 
 import java.io.*;
+import java.net.URISyntaxException;
+import java.net.URL;
+import java.net.URLConnection;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
+import java.util.HashMap;
+import java.util.List;
+import java.util.zip.GZIPInputStream;
 
 /**
  * A thin wrapper over Minio that stores and retrieves immutable data on our machines and supports versioning.
@@ -47,6 +53,15 @@ public class Datastore {
     // if this is not null, we will put files in this location
     private String cacheFolder = null;
 
+    /** this is used as a semaphore to lock creation of cache dirs. */
+    static private String MKDIR_LOCK = "LOCK_MK_MINIO_CACHE_DIRS";
+    
+    /** The process to download and cache a resource is two steps. First step is to identify
+     * a synchronization lock uniquely associated with the resource by name. Second step is then 
+     * to sync on that lock to load the resource. These two processes are sychronized to different
+     * objects.*/
+    static private final HashMap<String, String> loadLock = new HashMap<String, String>();
+    
     public Datastore() throws DatastoreException {
         // Create a minioClient with the information read from configuration file
         ResourceManager rm = null;
@@ -91,10 +106,99 @@ public class Datastore {
             }
         }
         setCacheFolders();
-        IOUtils.mkdir(DATASTORE_FOLDER);
-        IOUtils.mkdir(TMP_FOLDER);
+        makeDirectories();
+    }
+    
+    /**
+     * Checks if a file is gzipped and returns the appropriate stream.
+     * @param stream the input stream to the file to check.
+     * @return the input stream, converted to a gzip input stream if necessary.
+     * @throws IOException
+     */
+    private static InputStream checkGZipped(InputStream stream) throws IOException {
+        // check the first two bytes, if it's a gzip signature, return a gzip stream
+        PushbackInputStream pb = new PushbackInputStream(stream, 2);
+        byte[] signature = new byte[2];
+        pb.read(signature);
+        pb.unread(signature);
+        if (signature[0] == (byte) 0x1f && signature[1] == (byte) 0x8b)
+            return new GZIPInputStream(pb);
+        else
+            return pb;
     }
 
+    /**
+     * Loads a file either from the file system, and if not there, look in the 
+     * classpath, returning null if not found
+     * @param file The name of the file
+     * @return an input stream if the resource was found, or null if not.
+     */
+    @SuppressWarnings("resource")
+    public static InputStream findFile(String file) {
+        InputStream stream = null;
+        // see if there is a file.
+        try {
+            stream = new FileInputStream(file);
+        } catch (FileNotFoundException fnfe) {
+            
+            // it wasn't in file system, check the classpath.
+            List<URL> list = null;
+            try {
+                list = IOUtils.lsResources(Datastore.class, file);
+            } catch (URISyntaxException e) {
+                
+                // If in classpath, there is a problem that will prevent loading.;
+                return null;
+            } catch ( IOException e) {
+                
+                // If in classpath, there is a problem that will prevent loading.;
+                return null;
+            }
+            if (list.isEmpty()) {
+                
+                // also not in the classpath, return null;
+                return null;
+            }
+            
+            URL fileURL = list.get(0);
+            URLConnection connection;
+            try {
+                connection = fileURL.openConnection();
+            } catch (IOException e) {
+                
+                // in the class path, but could not open it.
+                return null;
+            }
+            try {
+                stream = connection.getInputStream();
+            } catch (IOException e) {
+
+                // in the class path, but could not open it.
+                return null;
+            }
+        }
+        
+        // Open stream as GZipped if needed
+        try {
+            stream = checkGZipped(stream);
+        } catch (IOException e) {
+
+            // in the class path, but could not open it.
+            return null;
+        }
+        return stream;
+    }
+
+    /**
+     * synchronize the creation of these directories, not sure what a race condition
+     * here might do, so we will just avoid it.
+     */
+    private void makeDirectories() {
+        synchronized (MKDIR_LOCK) {
+            IOUtils.mkdir(DATASTORE_FOLDER);
+            IOUtils.mkdir(TMP_FOLDER);
+        }
+    }
     public Datastore(String endpoint) throws DatastoreException {
         this(endpoint, System.getProperty("user.home"));
     }
@@ -113,8 +217,7 @@ public class Datastore {
         }
         this.cacheFolder = cacheFolder;
         setCacheFolders();
-        IOUtils.mkdir(DATASTORE_FOLDER);
-        IOUtils.mkdir(TMP_FOLDER);
+        makeDirectories();
     }
 
     public Datastore(ResourceManager rm) throws InvalidPortException, InvalidEndpointException {
@@ -123,8 +226,7 @@ public class Datastore {
         if(this.traceOn) minioClient.traceOn(System.out);
         this.cacheFolder = (rm.containsKey("CACHE-ROOT-FOLDER"))?rm.getString("CACHE-ROOT-FOLDER"):null;
         this.setCacheFolders();
-        IOUtils.mkdir(DATASTORE_FOLDER);
-        IOUtils.mkdir(TMP_FOLDER);
+        this.makeDirectories();
     }
 
     public Datastore(String endpoint, String accessKey, String secretKey) throws InvalidPortException, InvalidEndpointException {
@@ -141,8 +243,8 @@ public class Datastore {
         this.cacheFolder = cacheFolder;
         if(this.traceOn) minioClient.traceOn(System.out);
         this.setCacheFolders();
-        IOUtils.mkdir(DATASTORE_FOLDER);
-        IOUtils.mkdir(TMP_FOLDER);
+        this.makeDirectories();
+
     }
 
     // upon running this file, we'd set the folders for caching.
@@ -152,21 +254,6 @@ public class Datastore {
         this.DATASTORE_FOLDER = f + File.separator + ".cogcomp-datastore";
         this.TMP_FOLDER = this.DATASTORE_FOLDER + File.separator + "tmp";
     }
-
-//    public InputStream getFileAsStream(String groupId, String artifactId, Double version) throws IOException, InvalidKeyException, NoSuchAlgorithmException, InsufficientDataException, InvalidArgumentException, InternalException, NoResponseException, InvalidBucketNameException, XmlPullParserException, ErrorResponseException {
-//        return minioClient.getObject(groupId, artifactId + Double.toString(version) );
-//    }
-
-//    public File getFile(String groupId, String artifactId, Double version) throws IOException, InvalidKeyException, NoSuchAlgorithmException, InsufficientDataException, InvalidArgumentException, InternalException, NoResponseException, InvalidBucketNameException, XmlPullParserException, ErrorResponseException {
-//        InputStream fileStream = getFileAsStream(groupId, artifactId, version);
-//        byte[] buffer = new byte[fileStream.available()];
-//        fileStream.read(buffer);
-//        File targetFile = new File(DATASTORE_FOLDER + File.separator +
-//                groupId + File.separator + artifactId + Double.toString(version) );
-//        OutputStream outStream = new FileOutputStream(targetFile);
-//        outStream.write(buffer);
-//        return targetFile;
-//    }
 
     public void setTrace(boolean traceOn) {
         this.traceOn = traceOn;
@@ -190,63 +277,78 @@ public class Datastore {
         String fileFolder = DATASTORE_FOLDER + File.separator + augmentedGroupId;
         String downloadedFileName = fileFolder + File.separator + versionedFileName;
 
-        if(new File(downloadedFileName).exists()) {
-            System.out.println("File " +  downloadedFileName + " already exists. Skipping download from the datastore . . . ");
+        // first do the bookkeeping, make a synchronization lock object for loading this resource, or just fetch
+        // if it already exists.
+        synchronized(loadLock) {
+            String loadlock = loadLock.get(downloadedFileName);
+            if (loadlock != null) {
+                // this must be a shared singleton style resource, or the sync lock does nothing.
+                downloadedFileName = loadlock; 
+            } else {
+                loadLock.put(downloadedFileName, downloadedFileName);
+            }
         }
-        else {
-            IOUtils.mkdir(fileFolder);
-            if (versionedFileName.contains("/")) {
-                int idx = versionedFileName.lastIndexOf("/");
-                String location = fileFolder + File.separator + versionedFileName.substring(0, idx);
+        
+        // now we have a single object to sync on to load the resource.
+        synchronized(downloadedFileName) {
+            if(new File(downloadedFileName).exists()) {
+                System.out.println("File " +  downloadedFileName + " already exists. Skipping download from the datastore . . . ");
+            }
+            else {
+                IOUtils.mkdir(fileFolder);
+                if (versionedFileName.contains("/")) {
+                    int idx = versionedFileName.lastIndexOf("/");
+                    String location = fileFolder + File.separator + versionedFileName.substring(0, idx);
+                    try {
+                        FileUtils.forceMkdir(new File(location));
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                        throw new DatastoreException("Unable to create folder in your local machine " + location + " . . .");
+                    }
+                }
                 try {
-                    FileUtils.forceMkdir(new File(location));
+                    // if the file already exists, drop it:
+                    // IOUtils.rm(fileFolder + File.separator + versionedFileName);
+    
+                    ObjectStat objectStat = this.minioClient.statObject(augmentedGroupId, versionedFileName);
+    
+                    InputStream is = new ProgressStream("Downloading .. ", ProgressBarStyle.ASCII,
+                            objectStat.length(), minioClient.getObject(augmentedGroupId, versionedFileName));
+    
+                    Path path = Paths.get(downloadedFileName);
+                    OutputStream os = Files.newOutputStream(path, StandardOpenOption.CREATE);
+    
+                    long bytesWritten = ByteStreams.copy(is, os);
+                    is.close();
+                    os.close();
+                    if (bytesWritten != objectStat.length()) {
+                        throw new IOException(path + ": unexpected data written.  expected = " + objectStat.length() + ", written = " + bytesWritten);
+                    }
+                } catch (InvalidBucketNameException e) {
+                    e.printStackTrace();
+                    throw new DatastoreException("Invalid bucket name . . . ");
+                } catch (NoSuchAlgorithmException e) {
+                    e.printStackTrace();
+                } catch (InsufficientDataException e) {
+                    e.printStackTrace();
+                    throw new DatastoreException("Insufficient data . . . ");
                 } catch (IOException e) {
                     e.printStackTrace();
-                    throw new DatastoreException("Unable to create folder in your local machine " + location + " . . .");
+                } catch (InvalidKeyException e) {
+                    e.printStackTrace();
+                    throw new DatastoreException("Invalid key . . . ");
+                } catch (NoResponseException e) {
+                    e.printStackTrace();
+                    throw new DatastoreException("No server response . . . ");
+                } catch (XmlPullParserException e) {
+                    e.printStackTrace();
+                } catch (ErrorResponseException e) {
+                    e.printStackTrace();
+                } catch (InternalException e) {
+                    e.printStackTrace();
+                } catch (InvalidArgumentException e) {
+                    e.printStackTrace();
                 }
-            }
-            try {
-                // if the file already exists, drop it:
-                // IOUtils.rm(fileFolder + File.separator + versionedFileName);
-
-                ObjectStat objectStat = this.minioClient.statObject(augmentedGroupId, versionedFileName);
-
-                InputStream is = new ProgressStream("Downloading .. ", ProgressBarStyle.ASCII,
-                        objectStat.length(), minioClient.getObject(augmentedGroupId, versionedFileName));
-
-                Path path = Paths.get(downloadedFileName);
-                OutputStream os = Files.newOutputStream(path, StandardOpenOption.CREATE);
-
-                long bytesWritten = ByteStreams.copy(is, os);
-                is.close();
-                os.close();
-                if (bytesWritten != objectStat.length()) {
-                    throw new IOException(path + ": unexpected data written.  expected = " + objectStat.length() + ", written = " + bytesWritten);
-                }
-            } catch (InvalidBucketNameException e) {
-                e.printStackTrace();
-                throw new DatastoreException("Invalid bucket name . . . ");
-            } catch (NoSuchAlgorithmException e) {
-                e.printStackTrace();
-            } catch (InsufficientDataException e) {
-                e.printStackTrace();
-                throw new DatastoreException("Insufficient data . . . ");
-            } catch (IOException e) {
-                e.printStackTrace();
-            } catch (InvalidKeyException e) {
-                e.printStackTrace();
-                throw new DatastoreException("Invalid key . . . ");
-            } catch (NoResponseException e) {
-                e.printStackTrace();
-                throw new DatastoreException("No server response . . . ");
-            } catch (XmlPullParserException e) {
-                e.printStackTrace();
-            } catch (ErrorResponseException e) {
-                e.printStackTrace();
-            } catch (InternalException e) {
-                e.printStackTrace();
-            } catch (InvalidArgumentException e) {
-                e.printStackTrace();
             }
         }
         return new File(downloadedFileName);
@@ -413,66 +515,82 @@ public class Datastore {
         System.out.println("\t\tArtifactId: " + versionedFileName);
         String fileFolder = DATASTORE_FOLDER + File.separator + augmentedGroupId;
         String path = fileFolder + File.separator + version + File.separator + artifactId;
-        if(IOUtils.exists(path)) {
-            System.out.println("The target " + path + " already exists. Skipping download from the datastore . . . ");
+
+        // first do the bookkeeping, make a synchronization lock object for loading this resource, or just fetch
+        // if it already exists.
+        synchronized(loadLock) {
+            String loadlock = loadLock.get(path);
+            if (loadlock != null) {
+                // this must be a shared singleton style resource, or the sync lock does nothing.
+                path = loadlock; 
+            } else {
+                loadLock.put(path, path);
+            }
         }
-        else {
-            IOUtils.mkdir(fileFolder);
-            if (versionedFileName.contains("/")) {
-                int idx = versionedFileName.lastIndexOf("/");
-                String location = fileFolder + File.separator + versionedFileName.substring(0, idx);
+        
+        // now we have a single object to sync on to load the resource.
+        synchronized(path) {
+            if(IOUtils.exists(path)) {
+                System.out.println("The target " + path + " already exists. Skipping download from the datastore . . . ");
+            }
+            else {
+                IOUtils.mkdir(fileFolder);
+                if (versionedFileName.contains("/")) {
+                    int idx = versionedFileName.lastIndexOf("/");
+                    String location = fileFolder + File.separator + versionedFileName.substring(0, idx);
+                    try {
+                        FileUtils.forceMkdir(new File(location));
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                        throw new DatastoreException("Unable to create folder in your local machine " + location + " . . .");
+                    }
+                }
+    
+                // creating a zip file of the folder
+                String zippedFileName = TMP_FOLDER + File.separator + version + File.separator + artifactId + ".zip";
+                IOUtils.mkdir(TMP_FOLDER + File.separator + version + File.separator);
                 try {
-                    FileUtils.forceMkdir(new File(location));
+                    System.out.println("augmentedGroupId: " + augmentedGroupId);
+                    System.out.println("versionedFileName: " + versionedFileName);
+                    System.out.println("zippedFileName: " + zippedFileName);
+                    minioClient.getObject(augmentedGroupId, versionedFileName, zippedFileName);
+                } catch (InvalidBucketNameException e) {
+                    e.printStackTrace();
+                    throw new DatastoreException("Invalid bucket name . . . ");
+                } catch (NoSuchAlgorithmException e) {
+                    e.printStackTrace();
+                } catch (InsufficientDataException e) {
+                    e.printStackTrace();
+                    throw new DatastoreException("Insufficient data . . . ");
                 } catch (IOException e) {
                     e.printStackTrace();
-                    throw new DatastoreException("Unable to create folder in your local machine " + location + " . . .");
+                } catch (InvalidKeyException e) {
+                    e.printStackTrace();
+                    throw new DatastoreException("Invalid key . . . ");
+                } catch (NoResponseException e) {
+                    e.printStackTrace();
+                    throw new DatastoreException("No server response . . . ");
+                } catch (XmlPullParserException e) {
+                    e.printStackTrace();
+                } catch (ErrorResponseException e) {
+                    e.printStackTrace();
+                } catch (InternalException e) {
+                    e.printStackTrace();
+                } catch (InvalidArgumentException e) {
+                    e.printStackTrace();
                 }
-            }
-
-            // creating a zip file of the folder
-            String zippedFileName = TMP_FOLDER + File.separator + version + File.separator + artifactId + ".zip";
-            IOUtils.mkdir(TMP_FOLDER + File.separator + version + File.separator);
-            try {
-                System.out.println("augmentedGroupId: " + augmentedGroupId);
-                System.out.println("versionedFileName: " + versionedFileName);
+                IOUtils.mkdir(path);
+    
+                // unzip the downloaded zip file
+                ZipHelper.unZipIt(zippedFileName, path);
                 System.out.println("zippedFileName: " + zippedFileName);
-                minioClient.getObject(augmentedGroupId, versionedFileName, zippedFileName);
-            } catch (InvalidBucketNameException e) {
-                e.printStackTrace();
-                throw new DatastoreException("Invalid bucket name . . . ");
-            } catch (NoSuchAlgorithmException e) {
-                e.printStackTrace();
-            } catch (InsufficientDataException e) {
-                e.printStackTrace();
-                throw new DatastoreException("Insufficient data . . . ");
-            } catch (IOException e) {
-                e.printStackTrace();
-            } catch (InvalidKeyException e) {
-                e.printStackTrace();
-                throw new DatastoreException("Invalid key . . . ");
-            } catch (NoResponseException e) {
-                e.printStackTrace();
-                throw new DatastoreException("No server response . . . ");
-            } catch (XmlPullParserException e) {
-                e.printStackTrace();
-            } catch (ErrorResponseException e) {
-                e.printStackTrace();
-            } catch (InternalException e) {
-                e.printStackTrace();
-            } catch (InvalidArgumentException e) {
-                e.printStackTrace();
-            }
-            IOUtils.mkdir(path);
-
-            // unzip the downloaded zip file
-            ZipHelper.unZipIt(zippedFileName, path);
-            System.out.println("zippedFileName: " + zippedFileName);
-            System.out.println("path: " + path);
-            System.out.println("artifactId: " + artifactId);
-            try {
-                IOUtils.rm(zippedFileName);
-            } catch (IOException e) {
-                e.printStackTrace();
+                System.out.println("path: " + path);
+                System.out.println("artifactId: " + artifactId);
+                try {
+                    IOUtils.rm(zippedFileName);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
             }
         }
         return new File(path);
