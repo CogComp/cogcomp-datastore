@@ -52,11 +52,11 @@ public class DatastoreTest {
                     InputStream stream = new FileInputStream(gazDirectory.getPath() + File.separator + "gazetteers" 
                                     + File.separator + "gazetteers-list.txt");
                     BufferedReader br = new BufferedReader(new InputStreamReader(stream));
-                    String line;
-                    ArrayList<String> filenames = new ArrayList<>();
-                    while ((line = br.readLine()) != null);
+                    while ((br.readLine()) != null);
                     stream.close();
-                } catch (DatastoreException | IOException e) {
+                } catch (DatastoreException e) {
+                    e.printStackTrace();
+                } catch (IOException e) {
                     e.printStackTrace();
                 }
             }
