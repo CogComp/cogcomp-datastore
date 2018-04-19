@@ -145,7 +145,11 @@ public class Datastore {
             List<URL> list = null;
             try {
                 list = IOUtils.lsResources(Datastore.class, file);
-            } catch (URISyntaxException | IOException e) {
+            } catch (URISyntaxException e) {
+                
+                // If in classpath, there is a problem that will prevent loading.;
+                return null;
+            } catch ( IOException e) {
                 
                 // If in classpath, there is a problem that will prevent loading.;
                 return null;
